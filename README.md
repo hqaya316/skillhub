@@ -159,6 +159,16 @@ bash tests/smoke.sh                        # 端到端 13 项：隔离 HOME 造�
 - 纯离线扫 780 条实测约 1 秒；开 AI 备注要走模型批量请求（几十秒量级），之后内容没变的 skill 复用上次备注，不再请求模型
 - 面板是单页 HTML，几万条会卡（正常个人用量在几百到几千条）
 
+### 为什么面板删不掉 `~/Documents` 里的 skill
+
+macOS 把 `~/Documents`、`~/Desktop`、`~/Downloads` 列为受保护目录。由 `launchd` 启动的服务**不会弹授权框**，只会拿到 `EPERM`——表现就是扫描显示 0 个、删除报 `Operation not permitted`。三条出路，按省事程度排：
+
+1. **把库放在家目录根下**（推荐，零授权）：例如 `~/手术室工作/skills`，改 `config.json` 里那一行路径即可
+2. **给 python3 开完全磁盘访问权限**：系统设置 → 隐私与安全性 → 完全磁盘访问权限 → 加 `/usr/bin/python3`，然后 `launchctl kickstart -k gui/$(id -u)/com.laoh.skillhub`（权限只在进程启动时生效）
+3. 那条库不用面板删，直接在 Finder 里操作
+
+面板现在遇到权限问题会返回 403 并把上面的出路写进提示，不再只丢一句 errno。
+
 ## 目录结构
 
 ```

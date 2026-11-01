@@ -1,0 +1,18 @@
+# 本地运行产物与状态：不进货
+output/
+dist/
+config.json
+origins.json
+*.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,33 @@
+{
+  "_comment": "SkillHub 扫描根目录。agent=这个 skill 长在哪个软件里（仪表盘按它分类）。删掉某行即不扫该目录；路径支持 ~ 和 glob。",
+  "roots": [
+    {"path": "~/.hermes/skills",                  "agent": "Hermes",            "label": "Hermes 主库",   "primary": true},
+    {"path": "~/.hermes/profiles/*/skills",       "agent": "Hermes",            "label": "Hermes Profile", "primary": false},
+    {"path": "~/.codex/skills",                   "agent": "Codex",             "label": "Codex",         "primary": false},
+    {"path": "~/.codex/vendor_imports/skills",    "agent": "Codex",             "label": "Codex 导入库",   "primary": false},
+    {"path": "~/.claude/skills",                  "agent": "Claude Code",       "label": "Claude Code",   "primary": false},
+    {"path": "~/.cursor/skills-cursor",           "agent": "Cursor",            "label": "Cursor",        "primary": false},
+    {"path": "~/.dsh/profiles/*/skills",          "agent": "DeepSeek Harness",  "label": "DeepSeek Harness", "primary": false},
+    {"path": "~/.cc-switch/skills",               "agent": "cc-switch",         "label": "cc-switch 中转", "primary": false},
+    {"path": "~/.agent-skills",                   "agent": "公共库",             "label": "公共 Skill 库",  "primary": false},
+    {"path": "~/.agents/skills",                  "agent": "共享目录",           "label": "~/.agents 共享池", "primary": false},
+    {"path": "~/.skills-manager/skills",          "agent": "Skills Manager",    "label": "Skills Manager", "primary": false},
+    {"path": "~/.gemini/antigravity/builtin/skills", "agent": "Gemini",         "label": "Gemini 内置",    "primary": false},
+    {"path": "~/.accio/accounts/*/skills",        "agent": "Accio",             "label": "Accio",         "primary": false}
+  ],
+  "pool": {
+    "_comment": "公共 skill 库：同一个第三方 skill 全机只留一份实体，各 agent 目录里放软链指过来。",
+    "path": "~/.agent-skills",
+    "priority": ["公共库", "Hermes", "Codex", "Claude Code", "Cursor", "DeepSeek Harness", "cc-switch"],
+    "skip_agents": [],
+    "min_copies": 2
+  },
+  "archive_markers": [".archive", "_archive", "archive"],
+  "llm": {
+    "_comment": "不填密钥就纯离线跑。想开 AI 备注：export SKILLHUB_LLM_KEY=...（OpenAI 兼容接口都行）",
+    "enabled": true,
+    "model": "deepseek-chat",
+    "batch_size": 15,
+    "max_workers": 4
+  }
+}

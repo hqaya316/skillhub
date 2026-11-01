@@ -1,0 +1,5 @@
+{
+  "_comment": "自建 / 博主标注。marks：skill 名字 → 建它时用的 agent；blogger：名字 → 推荐|分享。面板上点按钮会写这里，重扫不丢。首次运行自动创建。",
+  "marks": {},
+  "blogger": {}
+}

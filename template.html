@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkillHub · 本机 Skill 总览</title>
+<style>
+  /* 中性色向冷石墨染色（不用纯灰、不用纯黑纯白）；强调色只有墨色一种，
+     彩色只留给数据本身（软件归属 / 标记 / 状态），界面不再上色 */
+  :root{
+    --page:#eceee9; --bg:#f8f9f6; --panel:#fdfdfb; --panel-2:#f1f2ee;
+    --fg:#171a18; --ink-2:#3f4541; --muted:#5d645f;
+    --border:rgba(23,26,24,.10); --hover:rgba(23,26,24,.045);
+    --accent:#171a18; --on-accent:#fbfbf9; --accent-soft:rgba(23,26,24,.10);
+    --shadow:0 1px 2px rgba(20,26,22,.05),0 8px 24px -14px rgba(20,26,22,.22);
+    --shadow-lg:0 28px 70px -34px rgba(20,26,22,.38);
+    --warn:#8a5a00; --up:#0b7a58; --dup:#6d3fd1;
+    --radius:14px; --r-sm:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --page:#07080a; --bg:#0c0e10; --panel:#15181b; --panel-2:#1b1f22;
+           --fg:#eceeec; --ink-2:#c6cbc8; --muted:#969c98;
+           --border:rgba(236,238,236,.085); --hover:rgba(236,238,236,.055);
+           --accent:#eceeec; --on-accent:#0c0e10; --accent-soft:rgba(236,238,236,.14);
+           --warn:#e0a53a; --up:#34d399; --dup:#a78bfa;
+           --shadow:0 1px 2px rgba(0,0,0,.55),0 12px 32px -20px rgba(0,0,0,.75);
+           --shadow-lg:0 34px 84px -34px rgba(0,0,0,.82); }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--page); color:var(--fg); font:14px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro SC",
+    "PingFang SC","Helvetica Neue",Arial,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .layout{display:flex; height:100vh; overflow:hidden}
+
+  /* ---------------- 侧栏 ---------------- */
+  aside{
+    width:250px; flex:0 0 250px; border-right:1px solid var(--border); background:var(--panel);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .brand{padding:20px 18px 12px}
+  .brand h1{font-size:16px;margin:0;letter-spacing:-.2px;font-weight:650}
+  .brand p{margin:3px 0 0;font-size:11.5px;color:var(--muted)}
+  .nav{overflow-y:auto; padding:4px 10px 24px; flex:1}
+  .nav .grp{margin-top:12px}
+  .nav .grp-h{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;
+              margin:0 8px 5px;border-radius:6px;padding:3px 4px 3px 2px;transition:background .12s}
+  .nav .grp-h:hover{background:var(--hover)}
+  .nav .grp-h .cv{font-size:10px;opacity:.75;transition:transform .16s cubic-bezier(.16,1,.3,1);flex:0 0 10px}
+  .nav .grp.collapsed .cv{transform:rotate(-90deg)}
+  .nav .grp.collapsed .grp-b{display:none}
+  .nav .grp-h .gn{margin-left:auto;font-size:10px;font-weight:400;opacity:.7;letter-spacing:0}
+  .nav h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+          margin:16px 8px 6px; font-weight:600}
+  .item{
+    display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;cursor:pointer;
+    color:var(--fg); font-size:13px; user-select:none; transition:background .12s;
+  }
+  .item:hover{background:var(--hover)}
+  .item.on{background:var(--hover); font-weight:600}
+  .item .dot{width:6px;height:6px;border-radius:50%;flex:0 0 6px;opacity:.85}
+  .item .ic{width:14px;text-align:center;opacity:.65;font-size:12px}
+  .item .n{margin-left:auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .item .n small{opacity:.62;font-size:10px;margin-left:1px}
+  .item.on .n{color:var(--fg)}
+
+  /* ---------------- 主区 ---------------- */
+  main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:16px 24px 12px;border-bottom:1px solid var(--border);background:var(--panel);
+         display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .search{flex:1;min-width:240px;position:relative}
+  .search input{
+    width:100%;padding:10px 14px 10px 36px;border-radius:11px;border:1px solid var(--border);
+    background:var(--bg);color:var(--fg);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .search input::placeholder{color:var(--muted);opacity:1}
+  .search span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{
+    padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-size:12px;cursor:pointer;transition:.12s; white-space:nowrap;
+  }
+  .chip:hover{background:var(--hover);color:var(--fg)}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+  .summary{padding:9px 24px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);
+           display:flex;gap:0;flex-wrap:wrap;align-items:center;background:var(--panel)}
+  .summary b{color:var(--fg);font-variant-numeric:tabular-nums;font-weight:650}
+  .summary .g{display:flex;gap:5px;align-items:center;padding:0 13px;border-right:1px solid var(--border);white-space:nowrap}
+  .summary .g:first-child{padding-left:0}
+  .summary .g.toggles{border-right:0;margin-left:auto;padding-right:0;gap:7px}
+  .tg-btn{
+    border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:7px;
+    padding:3px 9px;font-size:11px;cursor:pointer;transition:.12s;
+  }
+  .tg-btn:hover{background:var(--hover);color:var(--fg)}
+  .tg-btn.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+
+  .scroll{flex:1;overflow-y:auto;padding:18px 24px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:15px 16px 13px;cursor:pointer;position:relative;
+    box-shadow:0 1px 2px rgba(0,0,0,.06);
+    transition:border-color .18s cubic-bezier(.16,1,.3,1),
+               box-shadow .18s cubic-bezier(.16,1,.3,1), background .18s;
+  }
+  .card:hover{border-color:var(--accent-soft);box-shadow:var(--shadow);background:var(--panel-2)}
+  .card.arch{opacity:.5}
+  .card .top{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
+  .card .nm{font-weight:640;font-size:14px;letter-spacing:-.1px;word-break:break-word;line-height:1.35;
+            min-width:0;overflow-wrap:anywhere}
+  .card .badge{
+    margin-left:auto;flex:0 0 auto;font-size:11px;padding:2px 8px;border-radius:6px;
+    color:var(--c,#94a3b8);
+    background:color-mix(in srgb, var(--c,#94a3b8) 16%, transparent);
+    border:1px solid color-mix(in srgb, var(--c,#94a3b8) 34%, transparent);
+    font-weight:600;white-space:nowrap;
+  }
+  .card .note{font-size:13px;color:var(--fg);opacity:.92;margin:0 0 8px;
+              display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .meta{display:flex;gap:9px;font-size:12px;color:var(--muted);flex-wrap:wrap;align-items:center;
+              border-top:1px solid var(--border);padding-top:8px;min-width:0}
+  .card .meta{column-gap:12px}
+  .card .meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .card .meta .au::before,.card .meta .bear::before{content:none !important;margin:0}
+  .card .meta .au{font-weight:550;color:var(--muted)}
+  .au.self{background:var(--au,#64748b);color:#fff !important;font-weight:700;font-size:11px;
+           padding:1.5px 7px;border-radius:5px;letter-spacing:.2px;white-space:nowrap}
+  .bear{border:1px solid var(--bc,#f43f5e);color:var(--bc,#f43f5e) !important;font-weight:700;font-size:11px;
+        padding:1px 6px;border-radius:5px;white-space:nowrap}
+  .card .flags{display:flex;gap:5px;margin-top:6px}
+  .flag{font-size:11px;padding:1.5px 5px;border-radius:4px;border:1px solid var(--border);color:var(--muted)}
+  .flag.warn{border-color:var(--warn);color:var(--warn)}
+  .flag.dup{border-color:var(--dup);color:var(--dup)}
+  .flag.share{border-color:var(--up);color:var(--up)}
+  .flag.div{border-color:color-mix(in srgb, var(--warn) 50%, transparent);color:var(--warn)}
+  .empty{text-align:center;color:var(--muted);padding:64px 20px;font-size:13px}
+  .empty .e-ic{width:44px;height:44px;margin:0 auto 14px;border-radius:13px;display:grid;place-items:center;
+                font-size:19px;background:var(--accent-soft);color:var(--fg)}
+  .empty h4{margin:0 0 6px;font-size:14.5px;color:var(--fg);font-weight:650}
+  .empty p{margin:0 0 16px;line-height:1.6}
+  .chip.danger{border-color:rgba(239,68,68,.5);color:#ef4444}
+  .chip.danger:hover{background:rgba(239,68,68,.12);border-color:#ef4444}
+  /* 标记类按钮：未选中走中性，选中才实心上色，避免一行六种颜色打架 */
+  .chip.mark:hover{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.6);color:#f59e0b}
+  .chip.mark.on{background:#f59e0b;border-color:#f59e0b;color:#fff;font-weight:600}
+  .chip.blog.rec:hover{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.6);color:#14b8a6}
+  .chip.blog.rec.on{background:#14b8a6;border-color:#14b8a6;color:#fff;font-weight:600}
+  .chip.blog.sh:hover{background:rgba(14,165,233,.1);border-color:rgba(14,165,233,.6);color:#0ea5e9}
+  .chip.blog.sh.on{background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:600}
+  .chip.arch:hover{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.6);color:#10b981}
+  .chip.arch.primary{background:#10b981;border-color:#10b981;color:#fff;font-weight:600}
+  .chip.arch.primary:hover{background:#0ea472;border-color:#0ea472}
+  .chip.off{opacity:.42;cursor:not-allowed}
+  .chip.off:hover{background:transparent;color:var(--muted)}
+  .hint{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.5;
+        padding:8px 11px;border-radius:8px;border:1px dashed var(--border)}
+  #toast{
+    position:fixed;left:50%;bottom:34px;transform:translate(-50%,14px);z-index:99;
+    background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:10px;
+    font-size:12.5px;font-weight:550;box-shadow:0 8px 28px rgba(0,0,0,.28);
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:78vw;
+  }
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  .actions{
+    position:sticky;bottom:0;margin:20px -24px 0;padding:12px 24px 14px;
+    display:flex;gap:9px;align-items:center;flex-wrap:wrap;
+    background:var(--panel);border-top:1px solid var(--border);
+  }
+  .actions .danger{margin-left:auto}
+
+  /* ---------------- 详情弹层 ---------------- */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(3px);
+        display:none;align-items:center;justify-content:center;z-index:50;padding:24px}
+  .mask.on{display:flex}
+  .modal{
+    background:var(--panel);border-radius:18px;max-width:720px;width:100%;max-height:85vh;
+    overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.35);border:1px solid var(--border);
+  }
+  .modal .hd{padding:22px 24px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;
+             background:var(--panel);z-index:2}
+  .modal .hd h2{margin:0;font-size:17px;text-wrap:balance;letter-spacing:-.3px;word-break:break-word}
+  .modal .hd .sub{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+  .modal .bd{padding:18px 24px 0}
+  .kv{display:grid;grid-template-columns:88px 1fr;gap:8px 14px;font-size:13px;margin-bottom:16px}
+  .kv dt{color:var(--muted);font-size:12px}
+  .kv dd{margin:0;word-break:break-all}
+  .kv code{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+           background:var(--bg);padding:2px 6px;border-radius:5px;border:1px solid var(--border)}
+  .desc{font-size:13.5px;line-height:1.68;white-space:pre-wrap;word-break:break-word;
+        background:var(--bg);padding:14px 16px;border-radius:11px;border:1px solid var(--border)}
+  .mdl-cat{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:7px;
+           font-size:11.5px;font-weight:600;color:#fff}
+  .close{position:absolute;right:16px;top:16px;width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+         background:var(--bg);color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
+  .close:hover{background:var(--hover);color:var(--fg)}
+  .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .tg{font-size:11px;padding:2.5px 8px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+  /* ---------- 第一屏指标（随当前筛选实时变化） ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;
+        position:sticky;top:0;z-index:3;padding:2px 0 12px;background:var(--page)}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-sm);
+       padding:8px 12px 9px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:default}
+  .kpi.clickable{cursor:pointer;transition:border-color .16s,background .16s}
+  .kpi.clickable:hover{border-color:var(--accent-soft);background:var(--panel-2)}
+  .kpi .k-top{display:flex;align-items:center;gap:6px}
+  .kpi .k-ic{width:17px;height:17px;border-radius:5px;display:grid;place-items:center;
+             font-size:10px;background:var(--accent-soft);color:var(--fg);flex:0 0 17px}
+  .kpi[data-kpi] .k-ic{color:var(--warn);background:color-mix(in srgb, var(--warn) 14%, transparent)}
+  .kpi .k-lbl{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .k-num{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-top:2px;
+              font-variant-numeric:tabular-nums}
+  .kpi .k-num small{font-size:11.5px;font-weight:500;color:var(--muted);margin-left:5px;letter-spacing:0}
+
+  /* ---------- 键盘可达 ---------- */
+  .chip:focus-visible,.tg-btn:focus-visible,.item:focus-visible,.card:focus-visible,
+  .close:focus-visible,.search input:focus-visible{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .item:focus-visible{background:var(--hover)}
+
+  /* ---------- 触屏：所有可点区域到 44px ---------- */
+  @media (pointer:coarse){
+    .chip,.tg-btn{min-height:44px;padding:10px 14px}
+    .item{padding:11px 10px}
+    .close{width:44px;height:44px}
+  }
+
+  /* ---------- 尊重「减少动态效果」 ---------- */
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important}
+    .card:hover{transform:none}
+  }
+
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <h1>SkillHub</h1>
+      <p id="gen">—</p>
+    </div>
+    <div class="nav" id="nav"></div>
+  </aside>
+  <main>
+    <header>
+      <div class="search">
+        <span>⌕</span>
+        <input id="q" placeholder="搜索名称、简介、标签、作者、路径…（按 / 聚焦）" autocomplete="off">
+      </div>
+      <div class="chips" id="chips"></div>
+    </header>
+    <div class="summary" id="summary"></div>
+    <div class="scroll">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </main>
+</div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<script>
+const DATA = /*__DATA__*/;
+const TOKEN = /*__TOKEN__*/"";
+const IS_SERVER = location.protocol === "http:" && !!TOKEN;
+let CATS = DATA.cats, SK = DATA.skills;
+const ORIGIN_COLORS = { "Hermes":"#f59e0b","Codex":"#a855f7","Claude Code":"#ec4899",
+                        "Cursor":"#06b6d4","DeepSeek Harness":"#10b981","cc-switch":"#f97316" };
+const BLOG_COLORS = {"推荐":"#14b8a6","分享":"#0ea5e9"};
+const S = { q:"", cat:null, author:null, source:null, arch:false, sort:"cat" };
+
+/* ---------- 侧栏 ---------- */
+/* ---------- 侧栏分组折叠 ---------- */
+const COLLAPSE_KEY = "skillhub.collapsed";
+function collapsedMap(){
+  try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || "{}"); } catch(e){ return {}; }
+}
+function isCollapsed(key, defCollapsed){
+  const m = collapsedMap();
+  return (key in m) ? !!m[key] : !!defCollapsed;
+}
+function setCollapsed(key, val){
+  const m = collapsedMap(); m[key] = !!val;
+  try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(m)); } catch(e){}
+}
+/* 每个分组 = 可点标题 + 条目；默认折叠「作者 / 来源」，因为它最长 */
+function grp(key, title, body, count, defCollapsed, label){
+  if(!body) return "";
+  const col = isCollapsed(key, defCollapsed) ? " collapsed" : "";
+  return `<div class="grp${col}" data-g="${key}">
+    <h3 class="grp-h" tabindex="0" role="button"><span class="cv">▾</span><span>${esc(label||title)}</span>
+      ${count!=null?`<span class="gn">${count}</span>`:""}</h3>
+    <div class="grp-b">${body}</div></div>`;
+}
+function buildNav(){
+  const nav = document.getElementById("nav");
+  const catRows = CATS.filter(c=>c.count>0).map(c=>
+    `<div class="item" data-k="cat" data-v="${c.id}">
+       <span class="dot" style="background:${c.color}"></span>
+       <span>${c.label}</span><span class="n">${c.count}</span></div>`).join("");
+
+  const authors = Object.entries(DATA.stats.authors_visible).sort((a,b)=>b[1]-a[1]);
+  const auRows = authors.map(([a,n])=>
+    `<div class="item" data-k="author" data-v="${esc(a)}"><span class="ic">@</span>
+     <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a)}</span>
+     <span class="n">${n}</span></div>`).join("");
+
+  const srcRows = Object.entries(DATA.stats.agents_visible).filter(([a,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([a,n])=>{
+    const ex = (DATA.stats.agents_exclusive||{})[a]||0;
+    return `<div class="item" data-k="agent" data-v="${esc(a)}"
+      title="${esc(a)} 里装了 ${n} 个 skill（含与其它软件共用的），其中 ${ex} 个只有它有">
+      <span class="ic">▣</span><span>${esc(a)}</span>
+      <span class="n">${n}<small>·${ex}</small></span></div>`;}).join("");
+
+  const selfRows = Object.entries(DATA.stats.self_by_agent || {}).sort((a,b)=>b[1]-a[1]).map(([a,n])=>
+    `<div class="item" data-k="origin" data-v="${esc(a)}">
+       <span class="dot" style="background:${ORIGIN_COLORS[a]||"#64748b"}"></span>
+       <span>自建 · ${esc(a)}</span><span class="n">${n}</span></div>`).join("");
+
+  const blogRows = Object.entries(DATA.stats.blogger_by_kind || {}).sort((a,b)=>b[1]-a[1]).map(([k,n])=>
+    `<div class="item" data-k="blogger" data-v="${esc(k)}">
+       <span class="dot" style="background:${BLOG_COLORS[k]||"#64748b"}"></span>
+       <span>博主${esc(k)}</span><span class="n">${n}</span></div>`).join("");
+
+  nav.innerHTML =
+    `<div class="item on" data-k="cat" data-v="" title="已去重，不含包内子技能"><span class="ic">◉</span><span>全部 skill</span>
+       <span class="n">${DATA.stats.visible}</span></div>
+     ${selfRows?grp("origin","我的自建",selfRows,Object.keys(DATA.stats.self_by_agent||{}).length):""}
+     ${blogRows?grp("blogger","博主",blogRows,Object.keys(DATA.stats.blogger_by_kind||{}).length):""}
+     ${grp("agent","安装于（装了几个 · 独占几个）",srcRows,Object.entries(DATA.stats.agents_visible||{}).filter(([,n])=>n>0).length,false,"安装于")}
+     ${grp("cat","分类",catRows,Object.values(DATA.stats.cats_visible||{}).filter(n=>n>0).length)}
+     ${grp("author","作者 / 来源",auRows,Object.keys(DATA.stats.authors_visible||{}).length,true)}`;
+
+  nav.querySelectorAll(".grp-h").forEach(h=>{
+    const g = h.parentElement;
+    h.setAttribute("aria-expanded", String(!g.classList.contains("collapsed")));
+    const toggle = ev=>{
+      if(ev) ev.stopPropagation();
+      const col = g.classList.toggle("collapsed");
+      setCollapsed(g.dataset.g, col);
+      h.setAttribute("aria-expanded", String(!col));
+    };
+    h.onclick = toggle;
+    h.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(e); } };
+  });
+  nav.querySelectorAll(".item").forEach(el=>{
+    el.tabIndex = 0; el.setAttribute("role","button");
+    el.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); el.onclick(); } };
+    el.onclick = ()=>{
+      const k = el.dataset.k, v = el.dataset.v;
+      S.filter = null;                       // 侧栏和顶部 chip 是两套筛选，点了侧栏就换过去
+      document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.remove("on"));
+      const allChip = document.querySelector('.chip[data-f="all"]'); if(allChip) allChip.classList.add("on");
+      const IDENTITY = ["origin","blogger","agent","author","source"];
+      if(k==="cat" && !v){                     // 「全部 skill」= 条件全清
+        S.cat=null; IDENTITY.forEach(x=>{ S[x]=null; });
+      } else if(k==="cat"){
+        S.cat = (S.cat===v) ? null : v;        // 分类只和自己互斥，其它身份条件保留
+      } else {
+        // 我的自建 / 博主 / 安装于 / 作者：这几个是「身份」，同一时刻只能选一个
+        const same = S[k]===v;
+        IDENTITY.forEach(x=>{ S[x]=null; });
+        S[k] = same ? null : v;
+      }
+      applyState(); render();
+    };
+  });
+}
+
+/* ---------- 顶栏 chips ---------- */
+function buildChips(){
+  document.getElementById("chips").innerHTML = `
+    <button class="chip on" data-f="all">全部</button>
+    <button class="chip" data-f="active">活跃</button>
+    <button class="chip" data-f="arch">已归档</button>
+    <button class="chip" data-f="mine">我的自建</button>
+    <button class="chip" data-f="blog">博主推荐/分享</button>
+    <button class="chip" data-f="unlabeled">未标注</button>
+    <button class="chip" data-f="dup">跨库重复</button>`;
+  document.querySelectorAll(".chip[data-f]").forEach(c=>{
+    c.onclick = ()=>{
+      document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.remove("on"));
+      c.classList.add("on");
+      S.cat=null; S.author=null; S.source=null; S.agent=null; S.origin=null; S.blogger=null;
+      document.querySelectorAll(".nav .item").forEach(x=>x.classList.remove("on"));
+      if(!c.dataset.f || c.dataset.f==="all" || c.dataset.f==="arch")
+        document.querySelector('.nav .item[data-v=""]').classList.add("on");
+      S.arch = c.dataset.f==="arch"; S.filter = c.dataset.f==="all"||c.dataset.f==="arch" ? null : c.dataset.f;
+      render();
+    };
+  });
+}
+document.addEventListener("click", ev=>{
+  const kp = ev.target.closest("[data-kpi]");
+  if(kp){
+    const f = kp.dataset.kpi;
+    document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on", x.dataset.f===f));
+    S.cat=null; S.author=null; S.source=null; S.agent=null; S.origin=null; S.blogger=null;
+    S.arch=false; S.filter=f;
+    render(); return;
+  }
+  const t = ev.target.closest("[data-tg]");
+  if(!t) return;
+  const k = t.dataset.tg;
+  if(k==="dup"){ S.showDup = !S.showDup; t.classList.toggle("on", S.showDup); }
+  if(k==="bundle"){ S.showBundle = !S.showBundle; t.classList.toggle("on", S.showBundle); }
+  render();
+});
+
+/* ---------- 渲染 ---------- */
+function esc(s){ return String(s??"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function filtered(){
+  const q = S.q.trim().toLowerCase();
+  return SK.filter(s=>{
+    if(S.arch ? !s.archived : s.archived) return false;
+    if(S.filter!=="dup" && s.duplicate_of && !S.showDup) return false;
+    if(s.bundle && !S.showBundle && !q) return false;
+    if(S.cat && (s.category_final||s.category)!==S.cat) return false;
+    if(S.author && s.author!==S.author) return false;
+    if(S.source && s.source!==S.source) return false;
+    if(S.agent && !(s.agents_all||[s.agent||s.source]).includes(S.agent)) return false;
+    if(S.origin && s.origin_agent!==S.origin) return false;
+    if(S.blogger && s.blogger_kind!==S.blogger) return false;
+    if(S.filter==="blog" && !s.blogger_kind) return false;
+    if(S.filter==="mine" && !s.self_built) return false;
+    if(S.filter==="unlabeled" && (s.self_built || !(s.author==="未标注" || s.author_kind==="未知"))) return false;
+    if(S.filter==="dup" && !(s.dup_kind==="divergent" || ((s.dup_agents||[]).length>1))) return false;
+    if(q){
+      const hay = (s.name+" "+(s.description||"")+" "+s.tags.join(" ")+" "+s.author+" "+
+                   s.path+" "+(s.note||"")).toLowerCase();
+      if(!q.split(/\s+/).every(w=>hay.includes(w))) return false;
+    }
+    return true;
+  });
+}
+
+function dropCond(k){
+  if(k==="q"){ S.q=""; const q=document.getElementById("q"); if(q) q.value=""; }
+  else if(k==="filter"){
+    S.filter=null;
+    document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.remove("on"));
+    const all=document.querySelector('.chip[data-f="all"]'); if(all) all.classList.add("on");
+  }
+  else S[k]=null;
+  render();
+}
+function clearAll(){
+  S.q=""; S.cat=null; S.author=null; S.source=null; S.agent=null; S.origin=null; S.blogger=null;
+  S.filter=null; S.arch=false;
+  const q=document.getElementById("q"); if(q) q.value="";
+  document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.remove("on"));
+  const all=document.querySelector('.chip[data-f="all"]'); if(all) all.classList.add("on");
+  document.querySelectorAll(".nav .item").forEach(x=>x.classList.remove("on"));
+  const first=document.querySelector('.nav .item[data-v=""]'); if(first) first.classList.add("on");
+  render();
+}
+function render(){
+  const list = filtered();
+  const st = DATA.stats;
+  document.getElementById("summary").innerHTML =
+    `<span class="g" title="已去重：不含包内子技能与跨库副本">显示 <b>${list.length}</b> 个 · 收录 <b>${st.total}</b>（活跃 ${st.active} / 归档 ${st.archived}）</span>
+     <span class="g">当前 <b>${new Set(list.map(s=>s.category_final)).size}</b> 类 · <b>${new Set(list.map(s=>s.author)).size}</b> 位作者 · <b>${(list.reduce((a,s)=>a+s.lines,0)/1000).toFixed(0)}k</b> 行</span>
+     <span class="g toggles">
+       ${st.bundled?`<button class="tg-btn ${S.showBundle?"on":""}" data-tg="bundle"
+          title="展开技能包内的子技能（如 vibe-trading 内含 75 个）">+包内 ${st.bundled}</button>`:""}
+       <button class="tg-btn ${S.showDup?"on":""}" data-tg="dup"
+          title="显示在其他软件里也装了一份的副本">+跨库副本</button>
+     </span>`;
+
+  // 第一屏指标：跟着当前筛选实时变化，一眼看清「手上这堆是什么」
+  const kUnlabeled = list.filter(s=>!s.self_built && (s.author==="未标注"||s.author_kind==="未知")).length;
+  const kShared = list.filter(s=>s.shared_by&&s.dup_kind!=="divergent").length;
+  const kFork = list.filter(s=>s.dup_kind==="divergent").length;
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi" title="去重后当前可见的 skill 数；斜杠后是含包内与副本的总收录">
+      <div class="k-top"><span class="k-ic">◉</span><span class="k-lbl">可见 skill</span></div>
+      <div class="k-num">${list.length}<small>/ ${st.total} 收录</small></div></div>
+    <div class="kpi" title="同一份实体被多个软件共用（软链）">
+      <div class="k-top"><span class="k-ic">⇄</span><span class="k-lbl">跨库共用</span></div>
+      <div class="k-num">${kShared}<small>占当前 ${((kShared/Math.max(list.length,1))*100).toFixed(0)}%</small></div></div>
+    <div class="kpi clickable" data-kpi="dup" title="同名但内容不同，各库版本已分叉；点一下筛出来">
+      <div class="k-top"><span class="k-ic">⚠</span><span class="k-lbl">版本分叉</span></div>
+      <div class="k-num">${kFork}<small>${kFork?`占当前 ${((kFork/Math.max(list.length,1))*100).toFixed(0)}%`:"无分叉"}</small></div></div>
+    <div class="kpi clickable" data-kpi="unlabeled" title="还没标自建 / 博主来源；点一下筛出来">
+      <div class="k-top"><span class="k-ic">?</span><span class="k-lbl">未标注</span></div>
+      <div class="k-num">${kUnlabeled}<small>占当前 ${((kUnlabeled/Math.max(list.length,1))*100).toFixed(0)}%</small></div></div>`;
+
+  const g = document.getElementById("grid");
+  if(!list.length){
+    const conds = [];
+    if(S.q.trim()) conds.push({t:`搜索「${S.q.trim()}」`, k:"q"});
+    if(S.filter) conds.push({t:"顶部筛选：" + ((document.querySelector(".chip.on")||{}).innerText||S.filter), k:"filter"});
+    if(S.cat) conds.push({t:"分类：" + S.cat, k:"cat"});
+    if(S.agent) conds.push({t:"安装于：" + S.agent, k:"agent"});
+    if(S.origin) conds.push({t:"自建来源：" + S.origin, k:"origin"});
+    if(S.blogger) conds.push({t:"博主：" + S.blogger, k:"blogger"});
+    if(S.author) conds.push({t:"作者：" + S.author, k:"author"});
+    if(S.source) conds.push({t:"软件：" + S.source, k:"source"});
+    g.innerHTML = `<div class="empty">
+      <div class="e-ic">⌕</div>
+      <h4>没有同时满足这些条件的 skill</h4>
+      <p>${conds.length>1 ? "这几条筛选叠在一起就没有结果了，去掉其中一条再看看：" : "换个词或者去掉这个条件试试："}</p>
+      <div class="tagrow" style="justify-content:center;margin-bottom:14px">
+        ${conds.map(c=>`<button class="chip" onclick="dropCond('${c.k}')" title="点一下去掉这条">${esc(c.t)} ✕</button>`).join("")}
+      </div>
+      <button class="chip" onclick="clearAll()">全部清空，看全部 ${st.visible} 个</button>
+    </div>`;
+    return;
+  }
+  // 分类徽标只在「分类变了」的那张卡上出现：按分类排序时等于分组标题，
+  // 一屏同类的卡片不再重复贴同一个标签
+  const seenDup = new Set();   // 同名分叉的一对只在一张卡上写全「在哪些库里」，另一张只提示版本数
+  g.innerHTML = list.map(s=>{
+    const cat = CATS.find(c=>c.id===(s.category_final||s.category)) || {};
+    const note = s.note || (s.description ? cut(s.description,110) : (s.title||"（无简介）"));
+    return `<div class="card ${s.archived?"arch":""}" style="--c:${cat.color}" data-id="${esc(s.id)}"
+      tabindex="0" role="button" aria-label="${esc(s.name)}：${esc(note)}">
+      <div class="top">
+        <div class="nm">${esc(s.name)}</div>
+        <div class="badge">${esc(cat.label||"未分类")}</div>
+      </div>
+      <p class="note">${esc(note)}</p>
+      <div class="meta">
+        ${s.self_built
+          ? `<span class="au self" style="--au:${s.origin_color||"#64748b"}" title="我在 ${esc(s.origin_agent)} 里自建">自建 · ${esc(s.origin_agent)}</span>`
+          : `<span class="au">${esc(s.author)}</span>`}
+        ${s.blogger_kind?`<span class="bear" style="--bc:${s.blogger_color||"#14b8a6"}" title="博主${esc(s.blogger_kind)}">博主${esc(s.blogger_kind)}</span>`:""}
+        ${!(s.self_built && (s.agent||s.source)===s.origin_agent)?`<span>${esc(s.agent||s.source)}</span>`:""}
+        <span>${s.lines} 行</span>
+        <span>${esc(s.mtime)}</span>
+      </div>
+      ${(s.archived||s.duplicate_of||s.note_source==="llm"||s.conflict||s.bundle||s.bundle_children||s.shared_by||s.dup_kind)?
+        `<div class="flags">
+           ${s.dup_kind==="divergent"?(()=>{
+             const key=s.name+"|"+(s.dup_agents||[]).join(","), first=!seenDup.has(key);
+             seenDup.add(key);
+             return `<span class="flag div" title="同名但内容不同，各库版本已分叉">⚠ 同名 ${s.dup_versions||s.dup_count} 版${first?" · "+esc((s.dup_agents||[]).join(" / ")):""}</span>`;
+           })():""}
+           ${s.shared_by && s.dup_kind!=="divergent"?`<span class="flag share" title="这些软件通过软链引用公共库里的这一份，不再各自装一份">被引用 · ${esc(s.shared_by.join(" / "))}</span>`:""}
+           ${s.bundle_children?`<span class="flag">内含 ${s.bundle_children} 个子技能</span>`:""}
+           ${s.bundle?`<span class="flag">包内 · ${esc(s.bundle)}</span>`:""}
+           ${s.archived?'<span class="flag">已归档</span>':""}
+           ${s.dup_kind==="local"?`<span class="flag" title="同一个软件里装了多份，如主库 + profile">同库 ${s.local_copies} 份</span>`:""}
+           ${s.duplicate_of?`<span class="flag dup" title="同一份实体在别的软件里也有一份，默认隐藏">副本 · ${esc((s.dup_agents||[]).join(" / ")||"—")}</span>`:""}
+           ${s.note_source==="llm"?'<span class="flag">AI 备注</span>':""}
+         </div>`:""}
+    </div>`;
+  }).join("");
+
+  g.querySelectorAll(".card").forEach(c=>{
+    c.onclick = ()=> openDetail(list.find(x=>x.id===c.dataset.id));
+    c.onkeydown = e=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openDetail(list.find(x=>x.id===c.dataset.id)); }
+    };
+  });
+}
+
+function cut(s,n){ return s.length>n ? s.slice(0,n).trim()+"…" : s; }
+
+/* ---------- 详情 ---------- */
+let LAST_FOCUS = null;
+function openDetail(s){
+  if(!s) return;
+  LAST_FOCUS = document.activeElement;
+  CURRENT = s;
+  const canArchive = IS_SERVER && !s.bundle;
+  const inPool = s.agent === "公共库";
+  const cat = CATS.find(c=>c.id===(s.category_final||s.category)) || {};
+  const ruleCat = CATS.find(c=>c.id===s.category) || {};
+  const llmCat = CATS.find(c=>c.id===s.category_llm) || {};
+  const m = document.getElementById("modal");
+  m.innerHTML = `
+    <div class="hd">
+      <button class="close" onclick="closeDetail()">✕</button>
+      <h2>${esc(s.name)}</h2>
+      <div class="sub">
+        <span class="mdl-cat" style="background:${cat.color}">${esc(cat.label||"未分类")}</span>
+        <span>${esc(s.source)}</span>
+        ${s.self_built?`<span class="au self" style="--au:${s.origin_color||"#64748b"}">自建 · ${esc(s.origin_agent)}</span>`:""}
+        ${s.blogger_kind?`<span class="bear" style="--bc:${s.blogger_color||"#14b8a6"}">博主${esc(s.blogger_kind)}</span>`:""}
+        ${s.archived?"<span>· 已归档</span>":""}
+        ${s.dup_kind==="divergent"?`<span style="color:#f59e0b;font-weight:700;background:rgba(245,158,11,.15);padding:1px 7px;border-radius:5px">⚠ 版本分叉</span>`:""}
+        ${s.shared_by&&s.dup_kind!=="divergent"?`<span style="color:#10b981;font-weight:600">· 被引用 ${esc(s.shared_by.join(" / "))}</span>`:""}
+        ${s.dup_kind==="local"?`<span style="color:var(--muted)">· 同库 ${s.local_copies} 份</span>`:""}
+        ${s.duplicate_of?"<span style=\"color:var(--muted)\">· 副本</span>":""}
+      </div>
+    </div>
+    <div class="bd">
+      ${s.dup_kind==="divergent"?`<div style="margin-bottom:14px;padding:10px 13px;border-radius:9px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.1);font-size:12.5px;line-height:1.6">
+        <b style="color:#f59e0b">⚠ 跨库版本分叉 · 同名 ${s.dup_versions||s.dup_count} 个版本</b><br>
+        同一技能装在 ${esc((s.dup_agents||[]).join(" / "))}，内容已不一致。点下方「收进公共库」合并成一份（取最新版本）。<br>
+        <span style="color:var(--muted);font-size:11.5px">命令行等价操作：</span><code style="white-space:nowrap;display:inline-block;margin-top:2px;font-size:11px;background:var(--bg);padding:2px 7px;border-radius:5px;border:1px solid var(--border)">--add-to-pool ${esc(s.name)} --yes</code>
+      </div>`:""}
+      ${s.shared_by&&s.dup_kind!=="divergent"?`<div style="margin-bottom:14px;padding:10px 13px;border-radius:9px;border:1px solid rgba(16,185,129,.4);background:rgba(16,185,129,.09);font-size:12.5px;line-height:1.55">
+        <b style="color:#10b981">同一份实体，跨库共用</b> —— 实体存放于公共库，${esc((s.shared_by||[]).join(" / "))} 通过软链引用（共 ${s.copies_count||s.dup_count||1} 处），改一处全生效。
+      </div>`:""}
+      ${s.note?`<div style="margin-bottom:16px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">功能备注（AI 生成）</div>
+        <div class="desc" style="padding:11px 14px">${esc(s.note)}</div></div>`:""}
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">原始简介</div>
+      <div class="desc">${esc(s.description || s.title || "（该 skill 没有写 description）")}</div>
+      <dl class="kv" style="margin-top:18px">
+        <dt>作者 / 来源</dt><dd>${esc(s.author)} <span style="color:var(--muted);font-size:11px">（${esc(s.author_kind)} · 依据:${esc(s.author_basis)}）</span></dd>
+        <dt>分类</dt><dd>${esc(cat.label||"未分类")}
+          ${s.category_llm && s.category_llm!==s.category?`<span style="color:var(--muted);font-size:11.5px"> · 规则判为 ${esc(ruleCat.label)}，模型判为 ${esc(llmCat.label)}</span>`:""}
+        ${s.signals?.length?`<span style="color:var(--muted);font-size:11px"> · 信号: ${esc(s.signals.join("、"))}</span>`:""}</dd>
+        <dt>路径</dt><dd><code>${esc(s.path.replace(/^\/Users\/[^/]+/,"~"))}</code></dd>
+        <dt>版本 / 许可</dt><dd>${esc(s.version||"—")} · ${esc(s.license||"—")}</dd>
+        <dt>规模</dt><dd>${s.lines} 行 · ${(s.bytes/1024).toFixed(1)} KB · 更新于 ${esc(s.mtime)}</dd>
+        ${s.assets?.length?`<dt>附属目录</dt><dd>${s.assets.map(a=>`<code>${esc(a)}/</code>`).join(" ")}</dd>`:""}
+        ${s.tags?.length?`<dt>标签</dt><dd><div class="tagrow">${s.tags.map(t=>`<span class="tg">${esc(t)}</span>`).join("")}</div></dd>`:""}
+      </dl>
+      <div class="actions">
+        <button class="chip${IS_SERVER?"":" off"}" onclick="revealInFinder()" ${IS_SERVER?"":"disabled title='需从「启动面板.command」打开'"}>在 Finder 中显示</button>
+        <button class="chip mark${IS_SERVER?"":" off"}${s.self_built?" on":""}" onclick="toggleSelf()" ${IS_SERVER?"":"disabled title='需从「启动面板.command」打开'"}
+          title="标记为我在当前 agent 里自建的 skill">${s.self_built?"取消自建标注":"标为我自建"}</button>
+        <button class="chip blog rec${IS_SERVER?"":" off"}${s.blogger_kind==="推荐"?" on":""}" onclick="toggleBlogger('推荐')" ${IS_SERVER?"":"disabled"}
+          title="标记为博主推荐的 skill">博主推荐</button>
+        <button class="chip blog sh${IS_SERVER?"":" off"}${s.blogger_kind==="分享"?" on":""}" onclick="toggleBlogger('分享')" ${IS_SERVER?"":"disabled"}
+          title="标记为博主分享的 skill">博主分享</button>
+        <button class="chip arch${canArchive&&!inPool?(s.dup_kind==="divergent"?" primary":""):" off"}" onclick="archiveSkill()"
+          ${canArchive&&!inPool?"":"disabled"}
+          title="${s.bundle?"包内子技能，随整包处理":inPool?"实体已在公共库":"实体移入公共库，各 agent 的副本换成软链"}">${inPool?"已在公共库":"收进公共库"}</button>
+        <button class="chip danger${IS_SERVER?"":" off"}" onclick="deleteSkill()" ${IS_SERVER?"":"disabled title='需从「启动面板.command」打开'"}>移到废纸篓</button>
+      </div>
+      ${IS_SERVER?"":`<div class="hint">「在 Finder 中显示」与「删除」需要真实文件权限 —— 用 <b>启动面板.command</b> 打开面板即可启用。</div>`}
+    </div>`;
+  document.getElementById("mask").classList.add("on");
+  setTimeout(()=>{ const b=document.querySelector("#modal .close"); if(b) b.focus(); },30);
+}
+function closeDetail(){
+  document.getElementById("mask").classList.remove("on");
+  if(LAST_FOCUS && LAST_FOCUS.focus) try{ LAST_FOCUS.focus(); }catch(e){}
+}
+
+/* ---------- 动作（需要本地服务） ---------- */
+let CURRENT = null;
+async function api(path, method = "GET", body) {
+  const r = await fetch(path, {
+    method,
+    headers: { "X-Hub-Token": TOKEN, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = {};
+  try { data = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  return data;
+}
+/* ---------- 局部刷新：归档/删除/标注后原地更新，不重置筛选和滚动 ---------- */
+async function fetchData(){
+  const r = await fetch("/api/data", { headers: TOKEN ? { "X-Hub-Token": TOKEN } : {} });
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  return await r.json();
+}
+function applyState(){
+  document.querySelectorAll(".chip[data-f]").forEach(c=>{
+    const f = c.dataset.f;
+    c.classList.toggle("on", S.filter ? f===S.filter : (S.arch ? f==="arch" : f==="all"));
+  });
+  const noneActive = !S.cat && !S.author && !S.source && !S.agent && !S.origin && !S.blogger;
+  document.querySelectorAll(".nav .item").forEach(x=>{
+    const k = x.dataset.k, v = x.dataset.v;
+    const on = (k==="cat" && !v) ? noneActive : ((k==="cat") ? ((S.cat||"") === (v||"")) : (S[k]===v));
+    x.classList.toggle("on", on);
+  });
+  // 选中的项如果在收起的组里，自动展开那一组，否则看不到自己选了什么
+  document.querySelectorAll(".nav .grp.collapsed").forEach(g=>{
+    if(g.querySelector(".item.on")){
+      g.classList.remove("collapsed");
+      const h = g.querySelector(".grp-h"); if(h) h.setAttribute("aria-expanded","true");
+    }
+  });
+}
+async function softRefresh(){
+  const sc = document.querySelector(".scroll");
+  const top = sc ? sc.scrollTop : 0;
+  try{
+    const d = await fetchData();
+    DATA.skills = d.skills; DATA.stats = d.stats; DATA.cats = d.cats; DATA.built_at = d.built_at;
+    SK = d.skills; CATS = d.cats;
+    buildNav(); buildChips(); applyState(); render();
+    if(sc) sc.scrollTop = top;
+    const gen = document.getElementById("gen");
+    if(gen) gen.textContent = `生成于 ${d.generated} · ${d.stats.total} 个 skill`;
+    return true;
+  }catch(e){ applyState(); render(); return false; }
+}
+/* 后台重扫要几十秒，轮询到索引真的变了再替换，期间界面照常可用 */
+async function waitForRescan(limitMs = 60000){
+  const v0 = DATA.built_at, t0 = Date.now();
+  while(Date.now() - t0 < limitMs){
+    await new Promise(r=>setTimeout(r, 2500));
+    try{
+      const d = await fetchData();
+      if(d.built_at && d.built_at !== v0) return softRefresh();
+    }catch(e){}
+  }
+  toast("后台还在重建索引，稍后点右上角刷新即可", 4000);
+  return false;
+}
+function copyPath(){
+  if(!CURRENT) return;
+  navigator.clipboard.writeText(CURRENT.dir).then(()=>toast("路径已复制"));
+}
+async function revealInFinder(){
+  if(!CURRENT) return;
+  try {
+    await api("/api/reveal?path=" + encodeURIComponent(CURRENT.dir));
+    toast("已在 Finder 中打开");
+  } catch(e){ toast("打开失败：" + e.message); }
+}
+async function deleteSkill(){
+  if(!CURRENT) return;
+  const shared = CURRENT.shared_by ? `\n\n注意：这是公共库里的实体，${CURRENT.shared_by.join(" / ")} 通过软链共用，删除后它们也会失去这个 skill。` : "";
+  if(!confirm(`把「${CURRENT.name}」移到废纸篓？\n\n${CURRENT.dir}${shared}\n\n（移入废纸篓，可从废纸篓还原）`)) return;
+  try {
+    const r = await api("/api/delete", "POST", { path: CURRENT.dir });
+    const extra = r.unlinked && r.unlinked.length ? `，同时摘掉 ${r.unlinked.length} 个软链` : "";
+    const gone = CURRENT.dir, goneName = CURRENT.name;
+    closeDetail();
+    SK = SK.filter(x=>x.dir!==gone && !(x.bundle_dir===gone));
+    DATA.stats.total = Math.max(0, DATA.stats.total-1);
+    render();
+    toast(`已移到废纸篓${extra}，后台重建索引中…`, 5000);
+    waitForRescan();
+  } catch(e){ toast("删除失败：" + e.message, 6000); }
+}
+async function archiveSkill(){
+  if(!CURRENT) return;
+  const agents = (CURRENT.dup_agents && CURRENT.dup_agents.length ? CURRENT.dup_agents : [CURRENT.agent]).join(" / ");
+  const msg = `把「${CURRENT.name}」收进公共库？\n\n`
+    + `· 实体移到 ${"~/.agent-skills"}/${CURRENT.name}\n`
+    + `· ${agents} 里的副本删除，换成指向公共库的软链\n`
+    + `· 以后各 agent 调用的都是同一份，升级只改一处\n\n`
+    + `（被替换的副本进废纸篓，可从废纸篓还原）`;
+  if(!confirm(msg)) return;
+  try {
+    const r = await api("/api/archive", "POST", { name: CURRENT.name });
+    const t = (r.trashed || []).length, l = (r.linked || []).length;
+    closeDetail();
+    toast(`已收进公共库：${t} 份副本进废纸篓，${l} 处改为软链；索引重建中…`, 6000);
+    waitForRescan();
+  } catch(e){ toast("归档失败：" + e.message, 6000); }
+}
+async function toggleSelf(){
+  if(!CURRENT) return;
+  const mark = !CURRENT.self_built;
+  const agent = CURRENT.origin_agent || CURRENT.agent;
+  try {
+    await api("/api/origin", "POST", { name: CURRENT.name, agent, mark });
+    const nm = CURRENT.name;
+    SK.forEach(x=>{
+      if(x.name!==nm) return;
+      x.self_built = mark;
+      if(mark){ x.origin_agent = agent; x.author = "自建 · "+agent;
+                x.origin_color = (ORIGIN_COLORS&&ORIGIN_COLORS[agent]) || "#64748b"; }
+    });
+    closeDetail(); render();
+    toast(mark ? `已标为 自建 · ${agent}` : "已取消自建标注");
+    waitForRescan(30000);
+  } catch(e){ toast("标注失败：" + e.message, 5000); }
+}
+async function toggleBlogger(kind){
+  if(!CURRENT) return;
+  const same = CURRENT.blogger_kind === kind;
+  const mark = !same;                       // 点同一个 = 取消
+  try {
+    await api("/api/origin", "POST", { name: CURRENT.name, kind: "blogger", value: kind, mark });
+    const nm = CURRENT.name;
+    SK.forEach(x=>{
+      if(x.name!==nm) return;
+      if(mark){ x.blogger_kind = kind; x.blogger_color = (BLOG_COLORS&&BLOG_COLORS[kind]) || "#0ea5e9"; }
+      else { delete x.blogger_kind; delete x.blogger_color; }
+    });
+    closeDetail(); render();
+    toast(mark ? `已标为「博主${kind}」` : "已取消博主标记");
+    waitForRescan(30000);
+  } catch(e){ toast("标注失败：" + e.message, 5000); }
+}
+function toast(msg, ms = 2600){
+  let t = document.getElementById("toast");
+  if(!t){ t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>t.classList.remove("on"), ms);
+}
+
+/* ---------- 交互 ---------- */
+document.getElementById("q").addEventListener("input", e=>{ S.q=e.target.value; render(); });
+document.getElementById("mask").addEventListener("click", e=>{ if(e.target.id==="mask") closeDetail(); });
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeDetail();
+  if(e.key==="/" && document.activeElement.id!=="q"){ e.preventDefault(); document.getElementById("q").focus(); }
+});
+
+document.getElementById("gen").textContent = `生成于 ${DATA.generated} · ${DATA.stats.total} 个 skill`;
+buildNav(); buildChips(); render();
+</script>
+</body>
+</html>

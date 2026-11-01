@@ -6,6 +6,10 @@
 
 <sub>**English** — SkillHub indexes the `SKILL.md` folders scattered across your AI coding agents (Claude Code, Codex, Cursor, Hermes, DeepSeek Harness…), classifies them, writes one-line notes, and deduplicates identical copies into a single `~/.agent-skills` store with symlinks. Local-only dashboard, zero dependencies, Python 3.9+.</sub>
 
+![SkillHub 仪表盘](docs/dashboard.png)
+
+<sub>↑ 截图用的是 demo 数据（`docs/dashboard.png`），不是任何人的真实 skill 库。</sub>
+
 ```bash
 git clone https://github.com/hqaya316/skillhub.git && cd skillhub
 cp config.example.json config.json      # 删掉你没装的软件那几行
@@ -166,6 +170,7 @@ scripts/app-launcher.sh      .app 里的启动器（构建时注入代码目录�
 scripts/install-launchagent.sh  开机常驻
 scripts/open-panel.command   双击开面板（不装常驻也能用）
 tests/                 单元测试 + 端到端冒烟
+docs/dashboard.png     README 用的仪表盘截图（demo 数据）
 output/                生成物：skills.json / data.json / index.html（已 gitignore）
 dist/                  打包产物 SkillHub.app（已 gitignore）
 ```
@@ -175,7 +180,8 @@ dist/                  打包产物 SkillHub.app（已 gitignore）
 - [x] GitHub Actions：单元测试 + 冒烟（ubuntu / macOS × 3.9 / 3.12）
 - [x] 双击即用的 macOS `.app`（构建式，不含运行时）
 - [ ] 独立分发包：`.app` 内自带 Python + 代码（PyInstaller），别人 clone 都不用
-- [ ] English README + 30 秒 demo（GIF）
+- [x] README 首屏截图（demo 数据）
+- [ ] English README 全文 / 30 秒 demo（GIF）
 - [ ] `pipx install` 打包（当前数据文件按脚本目录解析，还没做资源定位）
 - [ ] Windows 回收站与软链适配
 - [ ] 面板内直接预览 `SKILL.md` 正文

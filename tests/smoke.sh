@@ -98,8 +98,9 @@ check "源码里没有本机绝对 home 路径" "0" \
   "$(grep -rlE "/(Users|home)/$(whoami)" "$TMP/repo" \
       --include='*.py' --include='*.json' --include='*.md' --include='*.sh' \
       2>/dev/null | wc -l | tr -d ' ')"
-check "源码树没有 output/ 目录" "no" \
-  "$([ -d "$REPO/output" ] && echo yes || echo no)"
+# 仓库也可能是正在运行的安装（output/ 由面板生成），所以查「有没有被提交」而不是「存不存在」
+check "output/ 没被 git 跟踪" "0" \
+  "$(git -C "$REPO" ls-files output | wc -l | tr -d ' ')"
 
 echo
 if [ "$FAIL" = "0" ]; then say "SMOKE PASS"; else say "SMOKE FAIL（看上面 ✗）"; fi

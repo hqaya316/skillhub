@@ -13,8 +13,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python: ["3.9", "3.12"]
+        # ubuntu-latest 已切到 26.04，该镜像没有 py3.9 的预编译包，
+        # 所以 3.9 这一格钉在 22.04；3.12 走最新镜像。
+        include:
+          - os: ubuntu-22.04
+            python: "3.9"
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: macos-latest
+            python: "3.10"
+          - os: macos-latest
+            python: "3.12"
 
     steps:
       - uses: actions/checkout@v4

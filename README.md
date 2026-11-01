@@ -1,5 +1,9 @@
 # SkillHub · 本机 Skill 总管家
 
+[![CI](https://github.com/hqaya316/skillhub/actions/workflows/ci.yml/badge.svg)](https://github.com/hqaya316/skillhub/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+
 把散落在 Hermes / Codex / Claude Code / Cursor / DeepSeek Harness 等一堆 AI 工具里的 skill 扫成**一张表**：自动分类、一句话功能备注、作者溯源，并把重复安装的第三方 skill 收成**一份实体 + 软链**。
 
 > Read-only by default: 分类结果只写进 `output/`，**绝不修改任何 `SKILL.md`**。

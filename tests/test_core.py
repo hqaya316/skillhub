@@ -182,5 +182,26 @@ class TrashTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self._trashed() + "-2"))
 
 
+class ErrorResponseTest(unittest.TestCase):
+    """权限类错误要变成 403 + 可照做的提示，别只丢一句 errno。"""
+
+    def test_permission_error_is_403_with_hint(self):
+        code, body = serve.error_response(
+            PermissionError(1, "Operation not permitted", "/Users/x/Documents/a"))
+        self.assertEqual(code, 403)
+        self.assertIn("完全磁盘访问权限", body["hint"])
+        self.assertIn("Operation not permitted", body["error"])
+
+    def test_plain_oserror_is_500_without_hint(self):
+        code, body = serve.error_response(OSError(2, "No such file"))
+        self.assertEqual(code, 500)
+        self.assertNotIn("hint", body)
+
+    def test_archive_error_keeps_context(self):
+        code, body = serve.error_response(PermissionError(13, "Permission denied"), "归集失败")
+        self.assertEqual(code, 403)
+        self.assertTrue(body["error"].startswith("归集失败"))
+
+
 if __name__ == "__main__":
     unittest.main()

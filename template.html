@@ -649,7 +649,11 @@ async function api(path, method = "GET", body) {
   });
   let data = {};
   try { data = await r.json(); } catch (e) {}
-  if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  if (!r.ok) {
+    const err = new Error(data.error || ("HTTP " + r.status));
+    err.hint = data.hint || "";
+    throw err;
+  }
   return data;
 }
 /* ---------- 局部刷新：归档/删除/标注后原地更新，不重置筛选和滚动 ---------- */
@@ -729,7 +733,7 @@ async function deleteSkill(){
     render();
     toast(`已移到废纸篓${extra}，后台重建索引中…`, 5000);
     waitForRescan();
-  } catch(e){ toast("删除失败：" + e.message, 6000); }
+  } catch(e){ toast("删除失败：" + e.message + (e.hint ? " · " + e.hint : ""), 9000); }
 }
 async function archiveSkill(){
   if(!CURRENT) return;

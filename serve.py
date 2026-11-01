@@ -7,6 +7,7 @@
 浏览器里的 file:// 页面没有文件系统权限，所以这两个按钮必须由本机服务执行。
 只监听 127.0.0.1，并且每次启动生成一次性 token，前端请求必须带上。
 """
+import errno
 import hashlib
 import http.server
 import json
@@ -237,6 +238,30 @@ def archive_skill(name, cfg):
             "agents": sorted({s.get("agent") for s in entries})}
 
 
+def perm_hint(exc):
+    """macOS 会挡住 ~/Documents、~/Desktop、~/Downloads。
+
+    由 launchd 拉起的进程不会有授权弹窗，只会拿到 EPERM——把下一步直接写进响应，
+    免得面板上只显示一句 [Errno 1] Operation not permitted。
+    """
+    if isinstance(exc, PermissionError) or getattr(exc, "errno", None) in (
+            errno.EPERM, errno.EACCES):
+        return ("macOS 没给本服务访问这个目录的权限：系统设置 → 隐私与安全性 → "
+                "完全磁盘访问权限，把 /usr/bin/python3 加进去后重载面板"
+                "（launchctl kickstart -k gui/$(id -u)/com.laoh.skillhub）；"
+                "临时办法是直接在 Finder 里删")
+    return ""
+
+
+def error_response(exc, what=""):
+    """异常 → (HTTP 状态码, 响应体)。权限类错误降级成 403 并带上可照做的提示。"""
+    hint = perm_hint(exc)
+    body = {"error": f"{what}: {exc}" if what else str(exc)}
+    if hint:
+        body["hint"] = hint
+    return (403 if hint else 500), body
+
+
 def to_trash(path):
     """移到废纸篓：macOS 走 Finder（可从废纸篓还原），其它平台退到 ~/.Trash。"""
     if sys.platform == "darwin":
@@ -409,7 +434,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             try:
                 to_trash(target)
             except OSError as e:
-                self._json({"error": f"删除失败: {e}"}, 500)
+                code, body = error_response(e)
+                self._json(body, code)
                 return
             self._json({"ok": True, "trashed": target, "unlinked": removed,
                         "next": "正在后台重建索引"})
@@ -457,7 +483,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             try:
                 res = archive_skill(name, load_cfg())
             except OSError as e:
-                self._json({"error": f"归集失败: {e}"}, 500)
+                code, body = error_response(e, "归集失败")
+                self._json(body, code)
                 return
             if "error" in res:
                 self._json(res, 400)
